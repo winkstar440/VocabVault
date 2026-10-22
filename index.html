@@ -3,17 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>極簡雲端單字表</title>
-  <!-- Tailwind CSS CDN -->
+  <title>多層級雲端單字表</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body {
-      background-color: #f8fafc;
-      color: #1e293b;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    }
+    body { background-color: #f8fafc; color: #1e293b; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -22,7 +16,7 @@
   <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
     <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
       <h1 class="text-lg font-semibold tracking-tight flex items-center gap-2">
-        <i class="fa-solid fa-book-open text-indigo-600"></i> 我的單字表
+        <i class="fa-solid fa-layer-group text-indigo-600"></i> 多層級單字表
       </h1>
       <div id="sync-status" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 flex items-center gap-1.5">
         <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="status-dot"></span>
@@ -34,33 +28,48 @@
   <!-- 主要內容區 -->
   <main class="max-w-md w-full mx-auto p-4 flex-1 pb-24">
 
-    <!-- 篩選與資料夾切換區 -->
-    <div class="mb-5 space-y-3">
+    <!-- 第一層：選擇語言大分類 -->
+    <div class="mb-4">
+      <label class="block text-xs font-medium text-slate-500 mb-1">1. 選擇語言大分類</label>
       <div class="flex gap-2">
-        <select id="folder-select" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          <option value="all">📂 全部詞彙 (All Words)</option>
+        <select id="lang-select" onchange="onLanguageChange()" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+          <option value="日文">🇯🇵 日文 (Japanese)</option>
+          <option value="西文">🇪🇸 西文 (Spanish)</option>
+          <option value="英文">🇬🇧 英文 (English)</option>
+          <option value="韓文">🇰🇷 韓文 (Korean)</option>
         </select>
-        <button onclick="openFolderModal()" class="bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 shrink-0">
-          <i class="fa-solid fa-folder-plus text-indigo-600"></i> 新增資料夾
+        <button onclick="openLangModal()" class="bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 shrink-0">
+          <i class="fa-solid fa-plus text-indigo-600"></i> 新語言
         </button>
       </div>
+    </div>
 
-      <!-- 搜尋框 -->
-      <div class="relative">
-        <i class="fa-solid fa-search absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-        <input type="text" id="search-input" placeholder="搜尋單字或翻譯..." oninput="renderApp()" class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    <!-- 第二層：選擇子資料夾 -->
+    <div class="mb-5">
+      <label class="block text-xs font-medium text-slate-500 mb-1">2. 選擇子資料夾</label>
+      <div class="flex gap-2">
+        <select id="subfolder-select" onchange="renderApp()" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+          <!-- 動態生成 -->
+        </select>
+        <button onclick="openSubFolderModal()" class="bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 shrink-0">
+          <i class="fa-solid fa-folder-plus text-indigo-600"></i> 新子夾
+        </button>
       </div>
+    </div>
+
+    <!-- 搜尋框 -->
+    <div class="mb-5 relative">
+      <i class="fa-solid fa-search absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+      <input type="text" id="search-input" placeholder="搜尋目前語言下的單字..." oninput="renderApp()" class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
     </div>
 
     <!-- 單字列表 -->
-    <div id="word-list" class="space-y-3">
-      <!-- 動態生成 -->
-    </div>
+    <div id="word-list" class="space-y-3"></div>
 
     <!-- 空狀態提示 -->
     <div id="empty-state" class="hidden text-center py-12 text-slate-400">
       <i class="fa-solid fa-box-open text-4xl mb-2"></i>
-      <p class="text-sm">目前沒有單字，點擊下方按鈕新增吧！</p>
+      <p class="text-sm">這個子資料夾還沒有單字，點擊下方按鈕新增吧！</p>
     </div>
 
   </main>
@@ -69,64 +78,56 @@
   <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4">
     <div class="max-w-md mx-auto">
       <button onclick="openWordModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
-        <i class="fa-solid fa-plus"></i> 新增單字
+        <i class="fa-solid fa-plus"></i> 在當前子夾新增單字
       </button>
     </div>
   </div>
 
-  <!-- 新增/編輯單字 Modal -->
+  <!-- 新增單字 Modal -->
   <div id="word-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-xl transform transition-transform">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-xl">
       <div class="flex justify-between items-center mb-4">
-        <h3 id="modal-title" class="font-semibold text-base">新增單字</h3>
-        <button onclick="closeWordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+        <h3 class="font-semibold text-base">新增單字</h3>
+        <button onclick="closeWordModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-      <form id="word-form" onsubmit="handleWordSubmit(event)" class="space-y-4">
-        <input type="hidden" id="word-id">
+      <form onsubmit="handleWordSubmit(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1">單字 / 詞彙</label>
-          <input type="text" id="word-term" required placeholder="例如: Hello / こんにちは" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <input type="text" id="word-term" required placeholder="例如: 準備 / Vocabulary" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1">翻譯 / 解釋</label>
-          <input type="text" id="word-definition" required placeholder="例如: 你好" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1">選擇資料夾</label>
-            <select id="word-folder" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <!-- 動態生成 -->
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-500 mb-1">語言代碼 (發音用)</label>
-            <select id="word-lang" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-              <option value="en-US">英語 (English)</option>
-              <option value="ja-JP">日語 (日本語)</option>
-              <option value="ko-KR">韓語 (한국어)</option>
-              <option value="zh-CN">普通話 (Mandarin)</option>
-              <option value="fr-FR">法語 (Français)</option>
-              <option value="es-ES">西班牙語 (Español)</option>
-            </select>
-          </div>
+          <input type="text" id="word-definition" required placeholder="例如: 翻譯或解釋" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-500 mb-1">備註 / 例句 (選填)</label>
-          <input type="text" id="word-note" placeholder="例如: 用於打招呼" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <input type="text" id="word-note" placeholder="例如: 常用於日常對話" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition text-sm mt-2">儲存單字</button>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition text-sm mt-2">確認新增</button>
       </form>
     </div>
   </div>
 
-  <!-- 新增資料夾 Modal -->
-  <div id="folder-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+  <!-- 新增語言大分類 Modal -->
+  <div id="lang-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-xl">
-      <h3 class="font-semibold text-base mb-4">新增分類資料夾</h3>
-      <input type="text" id="new-folder-name" placeholder="資料夾名稱 (例如: 日文常用)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+      <h3 class="font-semibold text-base mb-4">新增語言大分類</h3>
+      <input type="text" id="new-lang-name" placeholder="例如: 法文" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
       <div class="flex gap-2">
-        <button onclick="closeFolderModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-sm font-medium">取消</button>
-        <button onclick="createFolder()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-medium">建立</button>
+        <button onclick="closeLangModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-sm font-medium">取消</button>
+        <button onclick="createLanguage()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-medium">建立</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增子資料夾 Modal -->
+  <div id="subfolder-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-xl">
+      <h3 class="font-semibold text-base mb-4">在當前語言新增子資料夾</h3>
+      <input type="text" id="new-subfolder-name" placeholder="例如: travel, vocab" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+      <div class="flex gap-2">
+        <button onclick="closeSubFolderModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-sm font-medium">取消</button>
+        <button onclick="createSubFolder()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-medium">建立</button>
       </div>
     </div>
   </div>
@@ -135,9 +136,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    // 你的 Firebase 設定
     const firebaseConfig = {
       apiKey: "AIzaSyBGtBlMHiCJFrzV6jzFMSaYrpWCHUwKdrc",
       authDomain: "vocab-app-a95c0.firebaseapp.com",
@@ -152,114 +152,126 @@
     const db = getFirestore(app);
 
     let currentUserId = null;
-    let folders = ["預設資料夾"];
-    let words = [];
+    window.appData = {
+      languages: ["日文", "西文", "英文", "韓文"],
+      subFolders: {
+        "日文": ["vocab", "travel"],
+        "西文": ["basics", "verbs"],
+        "英文": ["GRE", "daily"],
+        "韓文": ["TOPIK"]
+      },
+      words: []
+    };
 
-    // 匿名登入並載入資料
     signInAnonymously(auth).then(() => {
       onAuthStateChanged(auth, (user) => {
         if (user) {
           currentUserId = user.uid;
           document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
           document.getElementById('status-text').innerText = "已連線雲端";
-          loadData();
+          loadCloudData();
         }
       });
-    }).catch((error) => {
+    }).catch(() => {
       document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-rose-500";
       document.getElementById('status-text').innerText = "連線失敗";
-      console.error("Auth error:", error);
     });
 
-    // 從 Firestore 讀取資料
-    window.loadData = async function() {
+    window.loadCloudData = async function() {
       if (!currentUserId) return;
       try {
-        const docRef = doc(db, "users", currentUserId, "data", "vocabData");
-        const querySnapshot = await getDocs(collection(db, "users", currentUserId, "words"));
-        
-        words = [];
+        const querySnapshot = await getDocs(collection(db, "users", currentUserId, "multilevel_words"));
+        window.appData.words = [];
         querySnapshot.forEach((doc) => {
-          words.push({ id: doc.id, ...doc.data() });
+          window.appData.words.push({ id: doc.id, ...doc.data() });
         });
 
-        // 讀取資料夾
-        const metaDoc = await getDocs(collection(db, "users", currentUserId, "meta"));
-        metaDoc.forEach((doc) => {
-          if (doc.id === "folders" && doc.data().list) {
-            folders = doc.data().list;
+        const metaSnap = await getDocs(collection(db, "users", currentUserId, "multilevel_meta"));
+        metaSnap.forEach((doc) => {
+          if (doc.id === "structure" && doc.data()) {
+            if (doc.data().languages) window.appData.languages = doc.data().languages;
+            if (doc.data().subFolders) window.appData.subFolders = doc.data().subFolders;
           }
         });
 
-        updateUI();
+        initUI();
       } catch (e) {
-        console.error("載入資料失敗: ", e);
+        console.error("載入失敗", e);
+      }
+    };
+
+    window.saveMetaToCloud = async function() {
+      if (!currentUserId) return;
+      await setDoc(doc(db, "users", currentUserId, "multilevel_meta", "structure"), {
+        languages: window.appData.languages,
+        subFolders: window.appData.subFolders
+      });
+    };
+
+    window.saveWordToCloud = async function(wordObj) {
+      if (!currentUserId) return;
+      const id = wordObj.id || Date.now().toString();
+      wordObj.id = id;
+      await setDoc(doc(db, "users", currentUserId, "multilevel_words", id), wordObj);
+      loadCloudData();
+    };
+
+    window.deleteWordFromCloud = async function(id) {
+      if (!currentUserId) return;
+      await deleteDoc(doc(db, "users", currentUserId, "multilevel_words", id));
+      loadCloudData();
+    };
+  </script>
+
+  <!-- 介面控制邏輯 -->
+  <script>
+    function initUI() {
+      renderLangSelect();
+      onLanguageChange();
+    }
+
+    function renderLangSelect() {
+      const select = document.getElementById('lang-select');
+      const current = select.value;
+      let html = '';
+      window.appData.languages.forEach(lang => {
+        html += `<option value="${lang}">${lang}</option>`;
+      });
+      select.innerHTML = html;
+      if (window.appData.languages.includes(current)) {
+        select.value = current;
       }
     }
 
-    // 儲存單字到 Firestore
-    window.saveWordToCloud = async function(wordObj) {
-      if (!currentUserId) return;
-      const wordId = wordObj.id || Date.now().toString();
-      wordObj.id = wordId;
-      await setDoc(doc(db, "users", currentUserId, "words", wordId), wordObj);
-      loadData();
-    }
-
-    // 從雲端刪除單字
-    window.deleteWordFromCloud = async function(wordId) {
-      if (!currentUserId) return;
-      await deleteDoc(doc(db, "users", currentUserId, "words", wordId));
-      loadData();
-    }
-
-    // 儲存資料夾到雲端
-    window.saveFoldersToCloud = async function() {
-      if (!currentUserId) return;
-      await setDoc(doc(db, "users", currentUserId, "meta", "folders"), { list: folders });
-    }
-
-    window.dbReady = true;
-  </script>
-
-  <!-- 前端邏輯控制 -->
-  <script>
-    // 介面渲染與互動控制
-    function updateUI() {
-      renderFolderSelects();
+    function onLanguageChange() {
+      const lang = document.getElementById('lang-select').value;
+      const subSelect = document.getElementById('subfolder-select');
+      const subs = window.appData.subFolders[lang] || [];
+      
+      let html = '';
+      subs.forEach(sub => {
+        html += `<option value="${sub}">${sub}</option>`;
+      });
+      subSelect.innerHTML = html;
       renderApp();
     }
 
-    function renderFolderSelects() {
-      const folderSelect = document.getElementById('folder-select');
-      const wordFolder = document.getElementById('word-folder');
-      
-      const currentSelected = folderSelect.value;
-      
-      let html = '<option value="all">📂 全部詞彙 (All Words)</option>';
-      let modalHtml = '';
-
-      folders.forEach(folder => {
-        html += `<option value="${folder}">${folder}</option>`;
-        modalHtml += `<option value="${folder}">${folder}</option>`;
-      });
-
-      folderSelect.innerHTML = html;
-      wordFolder.innerHTML = modalHtml;
-      
-      if(currentSelected) folderSelect.value = currentSelected;
-    }
-
     function renderApp() {
-      const selectedFolder = document.getElementById('folder-select').value;
+      const lang = document.getElementById('lang-select').value;
+      const sub = document.getElementById('subfolder-select').value;
       const keyword = document.getElementById('search-input').value.toLowerCase();
       const listContainer = document.getElementById('word-list');
       const emptyState = document.getElementById('empty-state');
 
-      let filtered = words.filter(w => {
-        const matchFolder = (selectedFolder === 'all' || w.folder === selectedFolder);
-        const matchKeyword = w.term.toLowerCase().includes(keyword) || w.definition.toLowerCase().includes(keyword);
-        return matchFolder && matchKeyword;
+      if (!sub) {
+        listContainer.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      const filtered = window.appData.words.filter(w => {
+        return w.lang === lang && w.subFolder === sub && 
+          (w.term.toLowerCase().includes(keyword) || w.definition.toLowerCase().includes(keyword));
       });
 
       if (filtered.length === 0) {
@@ -270,20 +282,19 @@
 
       emptyState.classList.add('hidden');
       let html = '';
-
       filtered.forEach(w => {
         html += `
-          <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex items-center justify-between gap-3">
+          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-2xs flex items-center justify-between gap-3">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 mb-0.5">
                 <span class="font-semibold text-slate-800 text-base truncate">${w.term}</span>
-                <span class="text-xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 font-medium shrink-0">${w.folder}</span>
+                <span class="text-xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 font-medium">${w.subFolder}</span>
               </div>
               <p class="text-sm text-slate-600 truncate">${w.definition}</p>
               ${w.note ? `<p class="text-xs text-slate-400 mt-1 truncate"><i class="fa-solid fa-note-sticky mr-1"></i>${w.note}</p>` : ''}
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <button onclick="speak('${w.term}', '${w.lang || 'en-US'}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition">
+              <button onclick="speak('${w.term}', '${w.lang}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition">
                 <i class="fa-solid fa-volume-high text-xs"></i>
               </button>
               <button onclick="deleteWord('${w.id}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition">
@@ -293,89 +304,88 @@
           </div>
         `;
       });
-
       listContainer.innerHTML = html;
     }
 
-    // 發音功能
-    function speak(text, lang) {
+    function speak(text, langName) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = lang;
-        utterance.rate = 0.9;
+        const map = { "日文": "ja-JP", "西文": "es-ES", "英文": "en-US", "韓文": "ko-KR" };
+        utterance.lang = map[langName] || "en-US";
         window.speechSynthesis.speak(utterance);
-      } else {
-        alert("您的瀏覽器不支援語音朗讀功能");
       }
     }
 
     // Modal 控制
-    function openWordModal() {
-      document.getElementById('word-id').value = '';
-      document.getElementById('word-term').value = '';
-      document.getElementById('word-definition').value = '';
-      document.getElementById('word-note').value = '';
-      document.getElementById('modal-title').innerText = '新增單字';
-      document.getElementById('word-modal').classList.remove('hidden');
-    }
+    function openWordModal() { document.getElementById('word-modal').classList.remove('hidden'); }
+    function closeWordModal() { document.getElementById('word-modal').classList.add('hidden'); }
+    function openLangModal() { document.getElementById('lang-modal').classList.remove('hidden'); }
+    function closeLangModal() { document.getElementById('lang-modal').classList.add('hidden'); }
+    function openSubFolderModal() { document.getElementById('subfolder-modal').classList.remove('hidden'); }
+    function closeSubFolderModal() { document.getElementById('subfolder-modal').classList.add('hidden'); }
 
-    function closeWordModal() {
-      document.getElementById('word-modal').classList.add('hidden');
-    }
-
-    function openFolderModal() {
-      document.getElementById('new-folder-name').value = '';
-      document.getElementById('folder-modal').classList.remove('hidden');
-    }
-
-    function closeFolderModal() {
-      document.getElementById('folder-modal').classList.add('hidden');
-    }
-
-    // 建立新資料夾
-    function createFolder() {
-      const name = document.getElementById('new-folder-name').value.trim();
-      if(name && !folders.includes(name)) {
-        folders.push(name);
-        if(typeof saveFoldersToCloud === 'function') saveFoldersToCloud();
-        updateUI();
-        closeFolderModal();
+    function createLanguage() {
+      const name = document.getElementById('new-lang-name').value.trim();
+      if (name && !window.appData.languages.includes(name)) {
+        window.appData.languages.push(name);
+        window.appData.subFolders[name] = [];
+        if (typeof saveMetaToCloud === 'function') saveMetaToCloud();
+        renderLangSelect();
+        document.getElementById('lang-select').value = name;
+        onLanguageChange();
+        closeLangModal();
       } else {
-        alert('資料夾名稱不能為空或已存在！');
+        alert('名稱不能為空或已存在');
       }
     }
 
-    // 提交單字表單
-    function handleWordSubmit(e) {
-      e.preventDefault();
-      const id = document.getElementById('word-id').value;
-      const term = document.getElementById('word-term').value.trim();
-      const definition = document.getElementById('word-definition').value.trim();
-      const folder = document.getElementById('word-folder').value;
-      const lang = document.getElementById('word-lang').value;
-      const note = document.getElementById('word-note').value.trim();
-
-      const wordObj = { id: id || undefined, term, definition, folder, lang, note };
-      
-      if(typeof saveWordToCloud === 'function') {
-        saveWordToCloud(wordObj);
-      }
-      
-      closeWordModal();
-    }
-
-    // 刪除單字
-    function deleteWord(id) {
-      if(confirm('確定要刪除這個單字嗎？')) {
-        if(typeof deleteWordFromCloud === 'function') {
-          deleteWordFromCloud(id);
+    function createSubFolder() {
+      const lang = document.getElementById('lang-select').value;
+      const sub = document.getElementById('new-subfolder-name').value.trim();
+      if (sub) {
+        if (!window.appData.subFolders[lang]) window.appData.subFolders[lang] = [];
+        if (!window.appData.subFolders[lang].includes(sub)) {
+          window.appData.subFolders[lang].push(sub);
+          if (typeof saveMetaToCloud === 'function') saveMetaToCloud();
+          onLanguageChange();
+          document.getElementById('subfolder-select').value = sub;
+          renderApp();
+          closeSubFolderModal();
+        } else {
+          alert('該子資料夾已存在');
         }
       }
     }
 
-    // 監聽資料夾切換
-    document.getElementById('folder-select').addEventListener('change', renderApp);
+    function handleWordSubmit(e) {
+      e.preventDefault();
+      const lang = document.getElementById('lang-select').value;
+      const subFolder = document.getElementById('subfolder-select').value;
+      const term = document.getElementById('word-term').value.trim();
+      const definition = document.getElementById('word-definition').value.trim();
+      const note = document.getElementById('word-note').value.trim();
+
+      if (!subFolder) {
+        alert('請先建立並選擇一個子資料夾！');
+        return;
+      }
+
+      const wordObj = { lang, subFolder, term, definition, note };
+      if (typeof saveWordToCloud === 'function') saveWordToCloud(wordObj);
+      closeWordModal();
+      document.getElementById('word-term').value = '';
+      document.getElementById('word-definition').value = '';
+      document.getElementById('word-note').value = '';
+    }
+
+    function deleteWord(id) {
+      if (confirm('確定要刪除這個單字嗎？')) {
+        if (typeof deleteWordFromCloud === 'function') deleteWordFromCloud(id);
+      }
+    }
+
+    setTimeout(() => { if(window.appData) initUI(); }, 1000);
   </script>
 </body>
 </html>

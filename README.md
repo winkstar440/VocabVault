@@ -1,23 +1,22 @@
-# 極簡雲端單字表 (VocabVault)
+# 多層級雲端單字表 (VocabVault)
 
-一個使用 Firebase 的極簡中文單字學習 App。
+支援「語言大分類 → 子資料夾」兩層結構的雲端單字學習 App。
 
 ## 功能
 
+- **兩層結構**：先選語言（日文 / 西文 / 英文 / 韓文…），再選子資料夾
+- 可自由新增語言大分類與子資料夾
 - 新增 / 刪除單字
-- 資料夾分類管理
-- 搜尋單字與翻譯
-- 文字轉語音（TTS）發音
-- **雲端同步**（Firebase Anonymous Auth + Firestore）
-- 手機友善介面
+- 搜尋目前語言下的單字
+- 文字轉語音（TTS）
+- Firebase 雲端同步（匿名登入）
 
 ## 技術
 
 - 純 HTML + Tailwind CSS + Vanilla JS
-- Firebase Authentication（匿名登入）
-- Cloud Firestore 儲存資料
+- Firebase Authentication（匿名）
+- Cloud Firestore
 
-## 注意
+## 部署建議
 
-此專案目前設為 **Private**，僅供個人使用。
-資料會根據匿名使用者 ID 分開儲存，不同裝置/瀏覽器會是不同帳號。
+建議使用 **Firebase Hosting** 部署，倉庫保持 Private。
