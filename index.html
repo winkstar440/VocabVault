@@ -1,804 +1,381 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VocabVault - Minimalist Language Vocabulary Builder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>極簡雲端單字表</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome Icons -->
+  <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- Google Fonts Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              50: '#f0f7ff',
-              100: '#e0effe',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8',
-              900: '#1e3a8a',
-            }
-          }
-        }
-      }
-    }
-  </script>
-
   <style>
-    /* Custom scrollbar hiding for clean mobile UI */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-    
-    /* Touch Feedback & Smooth Animations */
-    .active-scale {
-      transition: transform 0.15s ease;
-    }
-    .active-scale:active {
-      transform: scale(0.96);
-    }
-    
-    /* Smooth modal transitions */
-    .modal-backdrop {
-      transition: opacity 0.25s ease-in-out;
-    }
-    .modal-content {
-      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease-in-out;
-    }
-
     body {
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
-
-    input, textarea, select {
-      user-select: text;
+      background-color: #f8fafc;
+      color: #1e293b;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-blue-100">
+<body class="min-h-screen flex flex-col">
 
-  <!-- Header -->
-  <header class="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-slate-100 px-4 py-3 sm:px-6">
-    <div class="max-w-md mx-auto flex items-center justify-between">
-      <div class="flex items-center space-x-2">
-        <div class="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
-          <i class="fa-solid font-bold text-sm fa-book-bookmark"></i>
-        </div>
-        <h1 class="text-lg font-bold tracking-tight text-slate-900">VocabVault</h1>
-      </div>
-
-      <!-- Quick TTS Language Selector Header Dropdown -->
-      <div class="flex items-center space-x-2">
-        <label for="global-lang" class="sr-only">Pronunciation Language</label>
-        <div class="relative">
-          <select id="global-lang" onchange="changeLanguage(this.value)" class="appearance-none bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium py-1.5 pl-3 pr-7 rounded-lg border-0 cursor-pointer focus:ring-2 focus:ring-brand-500 transition-colors">
-            <option value="en-US">🇺🇸 EN</option>
-            <option value="ja-JP">🇯🇵 JA</option>
-            <option value="ko-KR">🇰🇷 KO</option>
-            <option value="es-ES">🇪🇸 ES</option>
-            <option value="fr-FR">🇫🇷 FR</option>
-            <option value="zh-TW">🇹🇼 ZH</option>
-          </select>
-          <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none"></i>
-        </div>
+  <!-- 頂部導覽列 -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
+      <h1 class="text-lg font-semibold tracking-tight flex items-center gap-2">
+        <i class="fa-solid fa-book-open text-indigo-600"></i> 我的單字表
+      </h1>
+      <div id="sync-status" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="status-dot"></span>
+        <span id="status-text">連線中...</span>
       </div>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="flex-1 max-w-md w-full mx-auto px-4 py-4 flex flex-col gap-4 pb-24">
-    
-    <!-- Search Bar -->
-    <div class="relative">
-      <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-      <input 
-        type="text" 
-        id="search-input" 
-        oninput="handleSearch(this.value)"
-        placeholder="Search words, meanings, or notes..." 
-        class="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-9 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all shadow-sm"
-      />
-      <button 
-        id="clear-search-btn" 
-        onclick="clearSearch()" 
-        class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
-        <i class="fa-solid fa-xmark text-xs"></i>
-      </button>
-    </div>
+  <!-- 主要內容區 -->
+  <main class="max-w-md w-full mx-auto p-4 flex-1 pb-24">
 
-    <!-- Category Folders Carousel -->
-    <div>
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Folders / Categories</span>
-        <button onclick="openCategoryModal()" class="text-xs text-brand-600 font-medium hover:text-brand-700 flex items-center space-x-1 active-scale">
-          <i class="fa-solid fa-plus"></i>
-          <span>New Folder</span>
+    <!-- 篩選與資料夾切換區 -->
+    <div class="mb-5 space-y-3">
+      <div class="flex gap-2">
+        <select id="folder-select" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="all">📂 全部詞彙 (All Words)</option>
+        </select>
+        <button onclick="openFolderModal()" class="bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 shrink-0">
+          <i class="fa-solid fa-folder-plus text-indigo-600"></i> 新增資料夾
         </button>
       </div>
 
-      <div id="category-bar" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 -mx-4 px-4">
-        <!-- Categories injected by JS -->
+      <!-- 搜尋框 -->
+      <div class="relative">
+        <i class="fa-solid fa-search absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+        <input type="text" id="search-input" placeholder="搜尋單字或翻譯..." oninput="renderApp()" class="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
       </div>
     </div>
 
-    <!-- Folder Info & Stats -->
-    <div class="flex items-center justify-between pt-2">
-      <div class="flex items-baseline space-x-2">
-        <h2 id="active-category-title" class="text-base font-bold text-slate-800">All Words</h2>
-        <span id="word-count" class="text-xs text-slate-400 font-medium">0 items</span>
-      </div>
-      <button id="delete-category-btn" onclick="confirmDeleteCategory()" class="hidden text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 active-scale">
-        <i class="fa-regular fa-trash-can"></i>
-        <span>Delete Folder</span>
-      </button>
+    <!-- 單字列表 -->
+    <div id="word-list" class="space-y-3">
+      <!-- 動態生成 -->
     </div>
 
-    <!-- Vocabulary List Container -->
-    <div id="vocab-list" class="flex flex-col gap-3">
-      <!-- Cards rendered dynamically -->
-    </div>
-
-    <!-- Empty State View -->
-    <div id="empty-state" class="hidden flex-col items-center justify-center py-12 text-center">
-      <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
-        <i class="fa-regular fa-folder-open text-2xl"></i>
-      </div>
-      <p class="text-slate-600 font-medium text-sm">No vocabulary items found</p>
-      <p class="text-slate-400 text-xs mt-1 max-w-[220px]">Try changing categories, clearing search, or adding new words.</p>
-      <button onclick="openAddWordModal()" class="mt-4 px-4 py-2 bg-brand-600 text-white text-xs font-medium rounded-lg shadow-sm hover:bg-brand-700 active-scale transition-colors">
-        + Add First Word
-      </button>
+    <!-- 空狀態提示 -->
+    <div id="empty-state" class="hidden text-center py-12 text-slate-400">
+      <i class="fa-solid fa-box-open text-4xl mb-2"></i>
+      <p class="text-sm">目前沒有單字，點擊下方按鈕新增吧！</p>
     </div>
 
   </main>
 
-  <!-- Floating Action Button (FAB) -->
-  <button 
-    onclick="openAddWordModal()" 
-    class="fixed right-5 bottom-6 w-14 h-14 bg-brand-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-brand-600/30 active-scale hover:bg-brand-700 transition-all z-10 focus:outline-none"
-    aria-label="Add new vocabulary item">
-    <i class="fa-solid fa-plus text-xl"></i>
-  </button>
+  <!-- 底部固定新增按鈕 -->
+  <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4">
+    <div class="max-w-md mx-auto">
+      <button onclick="openWordModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
+        <i class="fa-solid fa-plus"></i> 新增單字
+      </button>
+    </div>
+  </div>
 
-  <!-- Add/Edit Word Modal -->
-  <div id="word-modal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center opacity-0 pointer-events-none modal-backdrop bg-slate-900/40 backdrop-blur-sm">
-    <div class="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl modal-content transform translate-y-full sm:translate-y-4 max-h-[90vh] overflow-y-auto">
-      
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
-        <h3 id="modal-title" class="text-base font-bold text-slate-800">Add New Word</h3>
-        <button onclick="closeWordModal()" class="text-slate-400 hover:text-slate-600 p-1 rounded-full">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
+  <!-- 新增/編輯單字 Modal -->
+  <div id="word-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-xl transform transition-transform">
+      <div class="flex justify-between items-center mb-4">
+        <h3 id="modal-title" class="font-semibold text-base">新增單字</h3>
+        <button onclick="closeWordModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
       </div>
-
-      <form id="word-form" onsubmit="saveWord(event)" class="space-y-3.5">
-        <input type="hidden" id="word-id" value="">
-
+      <form id="word-form" onsubmit="handleWordSubmit(event)" class="space-y-4">
+        <input type="hidden" id="word-id">
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Word or Phrase *</label>
-          <input 
-            type="text" 
-            id="field-term" 
-            required
-            placeholder="e.g. Resilience / ⼐日" 
-            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-          />
+          <label class="block text-xs font-medium text-slate-500 mb-1">單字 / 詞彙</label>
+          <input type="text" id="word-term" required placeholder="例如: Hello / こんにちは" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
-
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Meaning / Definition *</label>
-          <input 
-            type="text" 
-            id="field-definition" 
-            required
-            placeholder="e.g. The capacity to recover quickly" 
-            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-          />
+          <label class="block text-xs font-medium text-slate-500 mb-1">翻譯 / 解釋</label>
+          <input type="text" id="word-definition" required placeholder="例如: 你好" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
-
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Folder / Category</label>
-            <select 
-              id="field-category" 
-              class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
-              <!-- Dynamically populated categories -->
+            <label class="block text-xs font-medium text-slate-500 mb-1">選擇資料夾</label>
+            <select id="word-folder" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <!-- 動態生成 -->
             </select>
           </div>
-
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Language (for TTS)</label>
-            <select 
-              id="field-language" 
-              class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
-              <option value="en-US">English</option>
-              <option value="ja-JP">Japanese</option>
-              <option value="ko-KR">Korean</option>
-              <option value="es-ES">Spanish</option>
-              <option value="fr-FR">French</option>
-              <option value="zh-TW">Traditional Chinese</option>
+            <label class="block text-xs font-medium text-slate-500 mb-1">語言代碼 (發音用)</label>
+            <select id="word-lang" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="en-US">英語 (English)</option>
+              <option value="ja-JP">日語 (日本語)</option>
+              <option value="ko-KR">韓語 (한국어)</option>
+              <option value="zh-CN">普通話 (Mandarin)</option>
+              <option value="fr-FR">法語 (Français)</option>
+              <option value="es-ES">西班牙語 (Español)</option>
             </select>
           </div>
         </div>
-
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Example Sentence / Notes (Optional)</label>
-          <textarea 
-            id="field-notes" 
-            rows="2" 
-            placeholder="e.g. Her resilience helped her overcome hardships." 
-            class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 resize-none"
-          ></textarea>
+          <label class="block text-xs font-medium text-slate-500 mb-1">備註 / 例句 (選填)</label>
+          <input type="text" id="word-note" placeholder="例如: 用於打招呼" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
-
-        <div class="pt-2 flex gap-2">
-          <button 
-            type="button" 
-            onclick="closeWordModal()" 
-            class="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 active-scale transition-colors">
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            class="w-1/2 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 active-scale transition-colors shadow-md shadow-brand-500/20">
-            Save Word
-          </button>
-        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl transition text-sm mt-2">儲存單字</button>
       </form>
-
     </div>
   </div>
 
-  <!-- Create Category Modal -->
-  <div id="category-modal" class="fixed inset-0 z-50 flex items-center justify-center opacity-0 pointer-events-none modal-backdrop bg-slate-900/40 backdrop-blur-sm px-4">
-    <div class="w-full max-w-sm bg-white rounded-2xl p-5 shadow-2xl modal-content transform scale-95">
-      <div class="flex items-center justify-between pb-3 border-b border-slate-100 mb-3">
-        <h3 class="text-base font-bold text-slate-800">New Folder / Category</h3>
-        <button onclick="closeCategoryModal()" class="text-slate-400 hover:text-slate-600 p-1">
-          <i class="fa-solid fa-xmark text-base"></i>
-        </button>
+  <!-- 新增資料夾 Modal -->
+  <div id="folder-modal" class="fixed inset-0 bg-black/40 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xs rounded-2xl p-6 shadow-xl">
+      <h3 class="font-semibold text-base mb-4">新增分類資料夾</h3>
+      <input type="text" id="new-folder-name" placeholder="資料夾名稱 (例如: 日文常用)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-4">
+      <div class="flex gap-2">
+        <button onclick="closeFolderModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-sm font-medium">取消</button>
+        <button onclick="createFolder()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-medium">建立</button>
       </div>
-
-      <form onsubmit="saveCategory(event)" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Category Name *</label>
-          <input 
-            type="text" 
-            id="new-category-name" 
-            required 
-            placeholder="e.g. Travel, Verbs, Idioms" 
-            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
-          />
-        </div>
-
-        <div class="pt-2 flex gap-2">
-          <button 
-            type="button" 
-            onclick="closeCategoryModal()" 
-            class="w-1/2 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 active-scale">
-            Cancel
-          </button>
-          <button 
-            type="submit" 
-            class="w-1/2 py-2.5 rounded-xl bg-brand-600 text-white text-sm font-medium hover:bg-brand-700 active-scale transition-colors">
-            Create
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 
-  <!-- Custom Alert/Toast Notification System -->
-  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 flex items-center space-x-2">
-    <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
-    <span id="toast-msg">Action saved</span>
-  </div>
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-  <!-- Application Logic JS -->
-  <script>
-    // Initial Sample Data Setup
-    const DEFAULT_CATEGORIES = ['Verbs', 'Daily Life', 'Travel', 'Idioms'];
-    
-    const DEFAULT_WORDS = [
-      {
-        id: '1',
-        term: 'Resilience',
-        definition: '彈性、復原力，迅速從困難中恢復的能力',
-        category: 'Daily Life',
-        language: 'en-US',
-        notes: 'Building emotional resilience takes time and patience.'
-      },
-      {
-        id: '2',
-        term: 'こもれび (Komorebi)',
-        definition: '樹葉縫隙中照進來的陽光',
-        category: 'Daily Life',
-        language: 'ja-JP',
-        notes: 'Expresses the poetic interplay of light and leaves.'
-      },
-      {
-        id: '3',
-        term: 'Serendipity',
-        definition: '意外發現珍貴或有趣事物的機緣',
-        category: 'Idioms',
-        language: 'en-US',
-        notes: 'Meeting an old friend in a foreign city was pure serendipity.'
-      },
-      {
-        id: '4',
-        term: ' Wanderlust',
-        definition: '強烈的漫遊或旅行欲望',
-        category: 'Travel',
-        language: 'en-US',
-        notes: 'Her wanderlust led her to explore over thirty countries.'
-      },
-      {
-        id: '5',
-        term: 'Persist',
-        definition: '堅持，持續存在',
-        category: 'Verbs',
-        language: 'en-US',
-        notes: 'If you persist, you will eventually master the language.'
-      }
-    ];
-
-    // State Management
-    let categories = [];
-    let words = [];
-    let activeCategory = 'ALL'; // 'ALL' or specific category name
-    let searchQuery = '';
-    let currentGlobalLang = 'en-US';
-
-    // Application Initialization
-    window.onload = function() {
-      loadLocalStorage();
-      renderCategories();
-      renderWords();
-      
-      // Warm up Speech Synthesis
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.getVoices();
-      }
+    // 你的 Firebase 設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGtBlMHiCJFrzV6jzFMSaYrpWCHUwKdrc",
+      authDomain: "vocab-app-a95c0.firebaseapp.com",
+      projectId: "vocab-app-a95c0",
+      storageBucket: "vocab-app-a95c0.firebasestorage.app",
+      messagingSenderId: "322032736816",
+      appId: "1:322032736816:web:3f42b3b06b2273c46febf5"
     };
 
-    // Load data from LocalStorage or populate defaults
-    function loadLocalStorage() {
-      const storedCategories = localStorage.getItem('vv_categories');
-      const storedWords = localStorage.getItem('vv_words');
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-      if (storedCategories) {
-        categories = JSON.parse(storedCategories);
-      } else {
-        categories = [...DEFAULT_CATEGORIES];
-        saveCategoriesToStorage();
+    let currentUserId = null;
+    let folders = ["預設資料夾"];
+    let words = [];
+
+    // 匿名登入並載入資料
+    signInAnonymously(auth).then(() => {
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          currentUserId = user.uid;
+          document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
+          document.getElementById('status-text').innerText = "已連線雲端";
+          loadData();
+        }
+      });
+    }).catch((error) => {
+      document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-rose-500";
+      document.getElementById('status-text').innerText = "連線失敗";
+      console.error("Auth error:", error);
+    });
+
+    // 從 Firestore 讀取資料
+    window.loadData = async function() {
+      if (!currentUserId) return;
+      try {
+        const docRef = doc(db, "users", currentUserId, "data", "vocabData");
+        const querySnapshot = await getDocs(collection(db, "users", currentUserId, "words"));
+        
+        words = [];
+        querySnapshot.forEach((doc) => {
+          words.push({ id: doc.id, ...doc.data() });
+        });
+
+        // 讀取資料夾
+        const metaDoc = await getDocs(collection(db, "users", currentUserId, "meta"));
+        metaDoc.forEach((doc) => {
+          if (doc.id === "folders" && doc.data().list) {
+            folders = doc.data().list;
+          }
+        });
+
+        updateUI();
+      } catch (e) {
+        console.error("載入資料失敗: ", e);
       }
-
-      if (storedWords) {
-        words = JSON.parse(storedWords);
-      } else {
-        words = [...DEFAULT_WORDS];
-        saveWordsToStorage();
-      }
     }
 
-    function saveCategoriesToStorage() {
-      localStorage.setItem('vv_categories', JSON.stringify(categories));
+    // 儲存單字到 Firestore
+    window.saveWordToCloud = async function(wordObj) {
+      if (!currentUserId) return;
+      const wordId = wordObj.id || Date.now().toString();
+      wordObj.id = wordId;
+      await setDoc(doc(db, "users", currentUserId, "words", wordId), wordObj);
+      loadData();
     }
 
-    function saveWordsToStorage() {
-      localStorage.setItem('vv_words', JSON.stringify(words));
+    // 從雲端刪除單字
+    window.deleteWordFromCloud = async function(wordId) {
+      if (!currentUserId) return;
+      await deleteDoc(doc(db, "users", currentUserId, "words", wordId));
+      loadData();
     }
 
-    // Render Category Tabs Carousel
-    function renderCategories() {
-      const container = document.getElementById('category-bar');
-      const categorySelect = document.getElementById('field-category');
+    // 儲存資料夾到雲端
+    window.saveFoldersToCloud = async function() {
+      if (!currentUserId) return;
+      await setDoc(doc(db, "users", currentUserId, "meta", "folders"), { list: folders });
+    }
 
-      // 1. Render Carousel Buttons
-      let html = `
-        <button 
-          onclick="selectCategory('ALL')" 
-          class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active-scale ${
-            activeCategory === 'ALL' 
-              ? 'bg-slate-900 text-white shadow-sm' 
-              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-          }">
-          <i class="fa-solid fa-folder-open mr-1.5"></i>All Words
-        </button>
-      `;
+    window.dbReady = true;
+  </script>
 
-      categories.forEach(cat => {
-        const isSelected = activeCategory === cat;
-        html += `
-          <button 
-            onclick="selectCategory('${cat}')" 
-            class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all active-scale ${
-              isSelected 
-                ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/20' 
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-            }">
-            <i class="fa-regular fa-folder mr-1.5"></i>${escapeHtml(cat)}
-          </button>
-        `;
+  <!-- 前端邏輯控制 -->
+  <script>
+    // 介面渲染與互動控制
+    function updateUI() {
+      renderFolderSelects();
+      renderApp();
+    }
+
+    function renderFolderSelects() {
+      const folderSelect = document.getElementById('folder-select');
+      const wordFolder = document.getElementById('word-folder');
+      
+      const currentSelected = folderSelect.value;
+      
+      let html = '<option value="all">📂 全部詞彙 (All Words)</option>';
+      let modalHtml = '';
+
+      folders.forEach(folder => {
+        html += `<option value="${folder}">${folder}</option>`;
+        modalHtml += `<option value="${folder}">${folder}</option>`;
       });
 
-      container.innerHTML = html;
-
-      // 2. Render Modal Category Dropdown options
-      let selectHtml = '';
-      categories.forEach(cat => {
-        selectHtml += `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`;
-      });
-      categorySelect.innerHTML = selectHtml;
-
-      // Toggle Delete Folder button visibility
-      const deleteBtn = document.getElementById('delete-category-btn');
-      if (activeCategory !== 'ALL') {
-        deleteBtn.classList.remove('hidden');
-      } else {
-        deleteBtn.classList.add('hidden');
-      }
-
-      // Update folder label title
-      document.getElementById('active-category-title').innerText = activeCategory === 'ALL' ? 'All Words' : activeCategory;
+      folderSelect.innerHTML = html;
+      wordFolder.innerHTML = modalHtml;
+      
+      if(currentSelected) folderSelect.value = currentSelected;
     }
 
-    // Render Vocabulary List
-    function renderWords() {
-      const container = document.getElementById('vocab-list');
+    function renderApp() {
+      const selectedFolder = document.getElementById('folder-select').value;
+      const keyword = document.getElementById('search-input').value.toLowerCase();
+      const listContainer = document.getElementById('word-list');
       const emptyState = document.getElementById('empty-state');
-      const wordCountEl = document.getElementById('word-count');
 
-      // Filter logic
-      let filtered = words.filter(item => {
-        const matchesCategory = activeCategory === 'ALL' || item.category === activeCategory;
-        const q = searchQuery.toLowerCase();
-        const matchesSearch = !q || 
-          item.term.toLowerCase().includes(q) || 
-          item.definition.toLowerCase().includes(q) || 
-          (item.notes && item.notes.toLowerCase().includes(q));
-
-        return matchesCategory && matchesSearch;
+      let filtered = words.filter(w => {
+        const matchFolder = (selectedFolder === 'all' || w.folder === selectedFolder);
+        const matchKeyword = w.term.toLowerCase().includes(keyword) || w.definition.toLowerCase().includes(keyword);
+        return matchFolder && matchKeyword;
       });
-
-      wordCountEl.innerText = `${filtered.length} item${filtered.length === 1 ? '' : 's'}`;
 
       if (filtered.length === 0) {
-        container.innerHTML = '';
+        listContainer.innerHTML = '';
         emptyState.classList.remove('hidden');
-        emptyState.classList.add('flex');
         return;
       }
 
       emptyState.classList.add('hidden');
-      emptyState.classList.remove('flex');
-
       let html = '';
-      filtered.forEach(item => {
+
+      filtered.forEach(w => {
         html += `
-          <div class="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow relative group">
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center space-x-2 mb-1">
-                  <h3 class="text-base font-bold text-slate-900 truncate">${escapeHtml(item.term)}</h3>
-                  <button 
-                    onclick="speakText('${escapeJavaScriptString(item.term)}', '${item.language || currentGlobalLang}')" 
-                    class="w-7 h-7 rounded-full bg-brand-50 hover:bg-brand-100 text-brand-600 flex items-center justify-center transition-colors active-scale flex-shrink-0"
-                    title="Listen Pronunciation">
-                    <i class="fa-solid fa-volume-high text-xs"></i>
-                  </button>
-                </div>
-                
-                <p class="text-xs font-medium text-slate-600 leading-relaxed">${escapeHtml(item.definition)}</p>
-
-                ${item.notes ? `
-                  <p class="text-xs text-slate-400 mt-2 bg-slate-50 p-2 rounded-lg border border-slate-100 italic">
-                    "${escapeHtml(item.notes)}"
-                  </p>
-                ` : ''}
+          <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs flex items-center justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-0.5">
+                <span class="font-semibold text-slate-800 text-base truncate">${w.term}</span>
+                <span class="text-xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 font-medium shrink-0">${w.folder}</span>
               </div>
+              <p class="text-sm text-slate-600 truncate">${w.definition}</p>
+              ${w.note ? `<p class="text-xs text-slate-400 mt-1 truncate"><i class="fa-solid fa-note-sticky mr-1"></i>${w.note}</p>` : ''}
             </div>
-
-            <!-- Card Bottom Bar: Category Badge & Action Buttons -->
-            <div class="mt-3 pt-2.5 border-t border-slate-50 flex items-center justify-between">
-              <span class="inline-flex items-center text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">
-                <i class="fa-regular fa-folder mr-1 text-[9px]"></i>${escapeHtml(item.category)}
-              </span>
-
-              <div class="flex items-center space-x-1">
-                <button 
-                  onclick="openEditWordModal('${item.id}')" 
-                  class="p-1.5 text-slate-400 hover:text-brand-600 rounded-lg hover:bg-slate-50 transition-colors"
-                  title="Edit">
-                  <i class="fa-regular fa-pen-to-square text-xs"></i>
-                </button>
-                <button 
-                  onclick="deleteWord('${item.id}')" 
-                  class="p-1.5 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-50 transition-colors"
-                  title="Delete">
-                  <i class="fa-regular fa-trash-can text-xs"></i>
-                </button>
-              </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick="speak('${w.term}', '${w.lang || 'en-US'}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition">
+                <i class="fa-solid fa-volume-high text-xs"></i>
+              </button>
+              <button onclick="deleteWord('${w.id}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
             </div>
           </div>
         `;
       });
 
-      container.innerHTML = html;
+      listContainer.innerHTML = html;
     }
 
-    // Change Active Category Filter
-    function selectCategory(cat) {
-      activeCategory = cat;
-      renderCategories();
-      renderWords();
-    }
-
-    // Search Handler
-    function handleSearch(val) {
-      searchQuery = val.trim();
-      const clearBtn = document.getElementById('clear-search-btn');
-      if (searchQuery.length > 0) {
-        clearBtn.classList.remove('hidden');
+    // 發音功能
+    function speak(text, lang) {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        utterance.rate = 0.9;
+        window.speechSynthesis.speak(utterance);
       } else {
-        clearBtn.classList.add('hidden');
+        alert("您的瀏覽器不支援語音朗讀功能");
       }
-      renderWords();
     }
 
-    function clearSearch() {
-      const input = document.getElementById('search-input');
-      input.value = '';
-      handleSearch('');
-    }
-
-    // Global Language Selector Change
-    function changeLanguage(langCode) {
-      currentGlobalLang = langCode;
-      showToast(`Default voice changed`);
-    }
-
-    // Text To Speech API Integration
-    function speakText(text, lang) {
-      if (!('speechSynthesis' in window)) {
-        showToast('Text-to-speech is not supported on this browser', 'error');
-        return;
-      }
-
-      // Stop existing speech
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang || currentGlobalLang || 'en-US';
-      utterance.rate = 0.9; // Slightly slower for better language practice learning clarity
-
-      window.speechSynthesis.speak(utterance);
-    }
-
-    // Modal Control Logic
-    function openAddWordModal() {
-      document.getElementById('modal-title').innerText = 'Add New Word';
+    // Modal 控制
+    function openWordModal() {
       document.getElementById('word-id').value = '';
-      document.getElementById('field-term').value = '';
-      document.getElementById('field-definition').value = '';
-      document.getElementById('field-notes').value = '';
-      document.getElementById('field-language').value = currentGlobalLang;
-
-      if (activeCategory !== 'ALL') {
-        document.getElementById('field-category').value = activeCategory;
-      } else if (categories.length > 0) {
-        document.getElementById('field-category').value = categories[0];
-      }
-
-      showModal('word-modal');
-    }
-
-    function openEditWordModal(id) {
-      const item = words.find(w => w.id === id);
-      if (!item) return;
-
-      document.getElementById('modal-title').innerText = 'Edit Vocabulary';
-      document.getElementById('word-id').value = item.id;
-      document.getElementById('field-term').value = item.term;
-      document.getElementById('field-definition').value = item.definition;
-      document.getElementById('field-category').value = item.category;
-      document.getElementById('field-language').value = item.language || currentGlobalLang;
-      document.getElementById('field-notes').value = item.notes || '';
-
-      showModal('word-modal');
+      document.getElementById('word-term').value = '';
+      document.getElementById('word-definition').value = '';
+      document.getElementById('word-note').value = '';
+      document.getElementById('modal-title').innerText = '新增單字';
+      document.getElementById('word-modal').classList.remove('hidden');
     }
 
     function closeWordModal() {
-      hideModal('word-modal');
+      document.getElementById('word-modal').classList.add('hidden');
     }
 
-    function openCategoryModal() {
-      document.getElementById('new-category-name').value = '';
-      showModal('category-modal');
+    function openFolderModal() {
+      document.getElementById('new-folder-name').value = '';
+      document.getElementById('folder-modal').classList.remove('hidden');
     }
 
-    function closeCategoryModal() {
-      hideModal('category-modal');
+    function closeFolderModal() {
+      document.getElementById('folder-modal').classList.add('hidden');
     }
 
-    function showModal(modalId) {
-      const modal = document.getElementById(modalId);
-      modal.classList.remove('pointer-events-none');
-      modal.classList.remove('opacity-0');
-      modal.classList.add('opacity-100');
-
-      const content = modal.querySelector('.modal-content');
-      content.classList.remove('translate-y-full', 'scale-95');
-      content.classList.add('translate-y-0', 'scale-100');
-    }
-
-    function hideModal(modalId) {
-      const modal = document.getElementById(modalId);
-      const content = modal.querySelector('.modal-content');
-
-      content.classList.remove('translate-y-0', 'scale-100');
-      if (modalId === 'word-modal') {
-        content.classList.add('translate-y-full');
+    // 建立新資料夾
+    function createFolder() {
+      const name = document.getElementById('new-folder-name').value.trim();
+      if(name && !folders.includes(name)) {
+        folders.push(name);
+        if(typeof saveFoldersToCloud === 'function') saveFoldersToCloud();
+        updateUI();
+        closeFolderModal();
       } else {
-        content.classList.add('scale-95');
+        alert('資料夾名稱不能為空或已存在！');
       }
-
-      modal.classList.remove('opacity-100');
-      modal.classList.add('opacity-0');
-      
-      setTimeout(() => {
-        modal.classList.add('pointer-events-none');
-      }, 250);
     }
 
-    // Save Word Event
-    function saveWord(e) {
+    // 提交單字表單
+    function handleWordSubmit(e) {
       e.preventDefault();
-
       const id = document.getElementById('word-id').value;
-      const term = document.getElementById('field-term').value.trim();
-      const definition = document.getElementById('field-definition').value.trim();
-      const category = document.getElementById('field-category').value;
-      const language = document.getElementById('field-language').value;
-      const notes = document.getElementById('field-notes').value.trim();
+      const term = document.getElementById('word-term').value.trim();
+      const definition = document.getElementById('word-definition').value.trim();
+      const folder = document.getElementById('word-folder').value;
+      const lang = document.getElementById('word-lang').value;
+      const note = document.getElementById('word-note').value.trim();
 
-      if (!term || !definition) return;
-
-      if (id) {
-        // Edit Existing
-        const index = words.findIndex(w => w.id === id);
-        if (index !== -1) {
-          words[index] = { id, term, definition, category, language, notes };
-          showToast('Vocabulary updated');
-        }
-      } else {
-        // Create New
-        const newWord = {
-          id: Date.now().toString(),
-          term,
-          definition,
-          category,
-          language,
-          notes
-        };
-        words.unshift(newWord);
-        showToast('New word saved');
+      const wordObj = { id: id || undefined, term, definition, folder, lang, note };
+      
+      if(typeof saveWordToCloud === 'function') {
+        saveWordToCloud(wordObj);
       }
-
-      saveWordsToStorage();
-      renderWords();
+      
       closeWordModal();
     }
 
-    // Delete Word Event
+    // 刪除單字
     function deleteWord(id) {
-      words = words.filter(w => w.id !== id);
-      saveWordsToStorage();
-      renderWords();
-      showToast('Word removed');
-    }
-
-    // Save Category Event
-    function saveCategory(e) {
-      e.preventDefault();
-      const catName = document.getElementById('new-category-name').value.trim();
-
-      if (!catName) return;
-
-      if (categories.includes(catName)) {
-        showToast('Category already exists', 'error');
-        return;
-      }
-
-      categories.push(catName);
-      saveCategoriesToStorage();
-      renderCategories();
-      
-      // Auto switch to newly created folder
-      selectCategory(catName);
-      closeCategoryModal();
-      showToast('Folder created');
-    }
-
-    // Delete Category Logic
-    function confirmDeleteCategory() {
-      if (activeCategory === 'ALL') return;
-
-      const count = words.filter(w => w.category === activeCategory).length;
-      const confirmMsg = count > 0 
-        ? `Deleting "${activeCategory}" will also remove ${count} associated vocabulary items. Continue?`
-        : `Delete folder "${activeCategory}"?`;
-
-      if (window.confirm(confirmMsg)) {
-        // Remove words in this category
-        words = words.filter(w => w.category !== activeCategory);
-        // Remove category
-        categories = categories.filter(c => c !== activeCategory);
-
-        saveWordsToStorage();
-        saveCategoriesToStorage();
-
-        activeCategory = 'ALL';
-        renderCategories();
-        renderWords();
-        showToast('Folder deleted');
+      if(confirm('確定要刪除這個單字嗎？')) {
+        if(typeof deleteWordFromCloud === 'function') {
+          deleteWordFromCloud(id);
+        }
       }
     }
 
-    // Utility: Show Toast Message
-    function showToast(msg, type = 'success') {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toast-msg');
-      const toastIcon = document.getElementById('toast-icon');
-
-      toastMsg.innerText = msg;
-
-      if (type === 'error') {
-        toastIcon.className = 'fa-solid fa-circle-exclamation text-amber-400';
-      } else {
-        toastIcon.className = 'fa-solid fa-circle-check text-emerald-400';
-      }
-
-      toast.classList.remove('opacity-0', 'pointer-events-none');
-      toast.classList.add('opacity-100');
-
-      setTimeout(() => {
-        toast.classList.remove('opacity-100');
-        toast.classList.add('opacity-0', 'pointer-events-none');
-      }, 2000);
-    }
-
-    // Helper functions for string escaping
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
-
-    function escapeJavaScriptString(str) {
-      if (!str) return '';
-      return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
-    }
+    // 監聽資料夾切換
+    document.getElementById('folder-select').addEventListener('change', renderApp);
   </script>
 </body>
 </html>
