@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多層級雲端單字表 (帳號密碼版)</title>
+  <title>多層級單字表 (Local Storage 版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -18,24 +18,20 @@
       <h1 class="text-lg font-semibold tracking-tight flex items-center gap-2">
         <i class="fa-solid fa-layer-group text-indigo-600"></i> 多層級單字表
       </h1>
-      <div id="auth-container" class="flex items-center gap-2">
-        <span class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500" id="status-text">檢查登入中...</span>
-      </div>
+      <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 font-medium">
+        <i class="fa-solid fa-hard-drive mr-1"></i> 本地儲存
+      </span>
     </div>
   </header>
 
-  <!-- 主要內容區 (登入後顯示) -->
-  <main id="app-main" class="max-w-md w-full mx-auto p-4 flex-1 pb-24 hidden">
+  <!-- 主要內容區 -->
+  <main class="max-w-md w-full mx-auto p-4 flex-1 pb-24">
 
     <!-- 第一層：選擇語言大分類 -->
     <div class="mb-4">
       <label class="block text-xs font-medium text-slate-500 mb-1">1. 選擇語言大分類</label>
       <div class="flex gap-2">
         <select id="lang-select" onchange="onLanguageChange()" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
-          <option value="日文">🇯🇵 日文 (Japanese)</option>
-          <option value="西文">🇪🇸 西文 (Spanish)</option>
-          <option value="英文">🇬🇧 英文 (English)</option>
-          <option value="韓文">🇰🇷 韓文 (Korean)</option>
         </select>
         <button onclick="openLangModal()" class="bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 shrink-0">
           <i class="fa-solid fa-plus text-indigo-600"></i> 新語言
@@ -48,7 +44,6 @@
       <label class="block text-xs font-medium text-slate-500 mb-1">2. 選擇子資料夾</label>
       <div class="flex gap-2">
         <select id="subfolder-select" onchange="renderApp()" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
-          <!-- 動態生成 -->
         </select>
         <button onclick="openSubFolderModal()" class="bg-white border border-slate-200 px-3 py-2.5 rounded-xl text-sm font-medium hover:bg-slate-50 shrink-0">
           <i class="fa-solid fa-folder-plus text-indigo-600"></i> 新子夾
@@ -73,37 +68,8 @@
 
   </main>
 
-  <!-- 未登入時的登入/註冊表單畫面 -->
-  <div id="login-prompt" class="max-w-md w-full mx-auto p-6 flex-1 flex flex-col justify-center">
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-      <div class="text-center mb-6">
-        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl mx-auto flex items-center justify-center text-xl mb-3">
-          <i class="fa-solid fa-lock"></i>
-        </div>
-        <h2 class="text-lg font-bold text-slate-800">登入你的單字庫</h2>
-        <p class="text-xs text-slate-500 mt-1">首次使用請直接輸入 Email 與密碼進行註冊</p>
-      </div>
-
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1">電子郵件 (Email)</label>
-          <input type="email" id="auth-email" placeholder="name@example.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-500 mb-1">密碼 (Password)</label>
-          <input type="password" id="auth-password" placeholder="設定密碼 (至少6位數)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        </div>
-
-        <div class="flex gap-2 pt-2">
-          <button onclick="handleLogin()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl transition text-sm shadow-sm">登入</button>
-          <button onclick="handleRegister()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-xl transition text-sm">註冊新帳號</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 底部固定新增按鈕 (登入後顯示) -->
-  <div id="footer-action" class="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-md border-t border-slate-200 p-4 hidden">
+  <!-- 底部固定新增按鈕 -->
+  <div class="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-md border-t border-slate-200 p-4">
     <div class="max-w-md mx-auto">
       <button onclick="openWordModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
         <i class="fa-solid fa-plus"></i> 在當前子夾新增單字
@@ -160,27 +126,9 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs & Email Auth Logic -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-
-    const firebaseConfig = {
-      apiKey: "AIzaSyBGtBlMHiCJFrzV6jzFMSaYrpWCHUwKdrc",
-      authDomain: "vocab-app-a95c0.firebaseapp.com",
-      projectId: "vocab-app-a95c0",
-      storageBucket: "vocab-app-a95c0.firebasestorage.app",
-      messagingSenderId: "322032736816",
-      appId: "1:322032736816:web:3f42b3b06b2273c46febf5"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    let currentUserId = null;
-    window.appData = {
+  <script>
+    // 預設資料結構
+    const defaultData = {
       languages: ["日文", "西文", "英文", "韓文"],
       subFolders: {
         "日文": ["vocab", "travel"],
@@ -191,123 +139,28 @@
       words: []
     };
 
-    // 監聽登入狀態
-    onAuthStateChanged(auth, (user) => {
-      const authContainer = document.getElementById('auth-container');
-      const appMain = document.getElementById('app-main');
-      const loginPrompt = document.getElementById('login-prompt');
-      const footerAction = document.getElementById('footer-action');
-
-      if (user) {
-        currentUserId = user.uid;
-        appMain.classList.remove('hidden');
-        loginPrompt.classList.add('hidden');
-        footerAction.classList.remove('hidden');
-        
-        authContainer.innerHTML = `
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-600 font-medium hidden sm:inline">${user.email}</span>
-            <button onclick="logout()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition">登出</button>
-          </div>
-        `;
-        loadCloudData();
-      } else {
-        currentUserId = null;
-        appMain.classList.add('hidden');
-        loginPrompt.classList.remove('hidden');
-        footerAction.classList.add('hidden');
-        authContainer.innerHTML = `<span class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">未登入</span>`;
+    // 讀取 Local Storage 資料
+    function loadData() {
+      const saved = localStorage.getItem('vocab_vault_local_data');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch(e) {
+          return defaultData;
+        }
       }
-    });
+      return defaultData;
+    }
 
-    window.handleLogin = async function() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-      if (!email || !password) {
-        alert('請輸入 Email 與密碼');
-        return;
-      }
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch (error) {
-        alert('登入失敗：請確認帳號密碼是否正確');
-        console.error(error);
-      }
-    };
+    let appData = loadData();
 
-    window.handleRegister = async function() {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-      if (!email || !password) {
-        alert('請輸入要註冊的 Email 與密碼');
-        return;
-      }
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert('註冊成功並已自動登入！');
-      } catch (error) {
-        alert('註冊失敗：密碼可能太短（需至少6位數）或 Email 格式有誤');
-        console.error(error);
-      }
-    };
+    // 儲存至 Local Storage
+    function saveData() {
+      localStorage.setItem('vocab_vault_local_data', JSON.stringify(appData));
+    }
 
-    window.logout = async function() {
-      try {
-        await signOut(auth);
-      } catch (error) {
-        console.error("登出失敗", error);
-      }
-    };
-
-    window.loadCloudData = async function() {
-      if (!currentUserId) return;
-      try {
-        const querySnapshot = await getDocs(collection(db, "users", currentUserId, "multilevel_words"));
-        window.appData.words = [];
-        querySnapshot.forEach((doc) => {
-          window.appData.words.push({ id: doc.id, ...doc.data() });
-        });
-
-        const metaSnap = await getDocs(collection(db, "users", currentUserId, "multilevel_meta"));
-        metaSnap.forEach((doc) => {
-          if (doc.id === "structure" && doc.data()) {
-            if (doc.data().languages) window.appData.languages = doc.data().languages;
-            if (doc.data().subFolders) window.appData.subFolders = doc.data().subFolders;
-          }
-        });
-
-        initUI();
-      } catch (e) {
-        console.error("載入失敗", e);
-      }
-    };
-
-    window.saveMetaToCloud = async function() {
-      if (!currentUserId) return;
-      await setDoc(doc(db, "users", currentUserId, "multilevel_meta", "structure"), {
-        languages: window.appData.languages,
-        subFolders: window.appData.subFolders
-      });
-    };
-
-    window.saveWordToCloud = async function(wordObj) {
-      if (!currentUserId) return;
-      const id = wordObj.id || Date.now().toString();
-      wordObj.id = id;
-      await setDoc(doc(db, "users", currentUserId, "multilevel_words", id), wordObj);
-      loadCloudData();
-    };
-
-    window.deleteWordFromCloud = async function(id) {
-      if (!currentUserId) return;
-      await deleteDoc(doc(db, "users", currentUserId, "multilevel_words", id));
-      loadCloudData();
-    };
-  </script>
-
-  <!-- 介面控制邏輯 -->
-  <script>
-    function initUI() {
+    // 初始化 UI
+    function init() {
       renderLangSelect();
       onLanguageChange();
     }
@@ -316,11 +169,11 @@
       const select = document.getElementById('lang-select');
       const current = select.value;
       let html = '';
-      window.appData.languages.forEach(lang => {
+      appData.languages.forEach(lang => {
         html += `<option value="${lang}">${lang}</option>`;
       });
       select.innerHTML = html;
-      if (window.appData.languages.includes(current)) {
+      if (appData.languages.includes(current)) {
         select.value = current;
       }
     }
@@ -328,7 +181,7 @@
     function onLanguageChange() {
       const lang = document.getElementById('lang-select').value;
       const subSelect = document.getElementById('subfolder-select');
-      const subs = window.appData.subFolders[lang] || [];
+      const subs = appData.subFolders[lang] || [];
       
       let html = '';
       subs.forEach(sub => {
@@ -351,7 +204,7 @@
         return;
       }
 
-      const filtered = window.appData.words.filter(w => {
+      const filtered = appData.words.filter(w => {
         return w.lang === lang && w.subFolder === sub && 
           (w.term.toLowerCase().includes(keyword) || w.definition.toLowerCase().includes(keyword));
       });
@@ -376,10 +229,10 @@
               ${w.note ? `<p class="text-xs text-slate-400 mt-1 truncate"><i class="fa-solid fa-note-sticky mr-1"></i>${w.note}</p>` : ''}
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <button onclick="speak('${w.term}', '${w.lang}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition">
+              <button onclick="speak('${w.term}', '${w.lang}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-indigo-50 text-slate-600 hover:text-indigo-600 flex items-center justify-center transition" title="發音">
                 <i class="fa-solid fa-volume-high text-xs"></i>
               </button>
-              <button onclick="deleteWord('${w.id}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition">
+              <button onclick="deleteWord('${w.id}')" class="w-9 h-9 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition" title="刪除">
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </div>
@@ -389,17 +242,30 @@
       listContainer.innerHTML = html;
     }
 
+    // 🔊 發音功能 (使用原生 Web Speech API)
     function speak(text, langName) {
       if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+        window.speechSynthesis.cancel(); // 停止先前的發音
         const utterance = new SpeechSynthesisUtterance(text);
-        const map = { "日文": "ja-JP", "西文": "es-ES", "英文": "en-US", "韓文": "ko-KR" };
-        utterance.lang = map[langName] || "en-US";
+        
+        // 語言語系對照表
+        const langMap = { 
+          "日文": "ja-JP", 
+          "西文": "es-ES", 
+          "英文": "en-US", 
+          "韓文": "ko-KR",
+          "法文": "fr-FR",
+          "德文": "de-DE"
+        };
+
+        utterance.lang = langMap[langName] || "en-US";
         window.speechSynthesis.speak(utterance);
+      } else {
+        alert('您的瀏覽器不支援語音發音功能');
       }
     }
 
-    // Modal 控制
+    // Modal 控制邏輯
     function openWordModal() { document.getElementById('word-modal').classList.remove('hidden'); }
     function closeWordModal() { document.getElementById('word-modal').classList.add('hidden'); }
     function openLangModal() { document.getElementById('lang-modal').classList.remove('hidden'); }
@@ -409,14 +275,15 @@
 
     function createLanguage() {
       const name = document.getElementById('new-lang-name').value.trim();
-      if (name && !window.appData.languages.includes(name)) {
-        window.appData.languages.push(name);
-        window.appData.subFolders[name] = [];
-        if (typeof saveMetaToCloud === 'function') saveMetaToCloud();
+      if (name && !appData.languages.includes(name)) {
+        appData.languages.push(name);
+        appData.subFolders[name] = [];
+        saveData();
         renderLangSelect();
         document.getElementById('lang-select').value = name;
         onLanguageChange();
         closeLangModal();
+        document.getElementById('new-lang-name').value = '';
       } else {
         alert('名稱不能為空或已存在');
       }
@@ -426,14 +293,15 @@
       const lang = document.getElementById('lang-select').value;
       const sub = document.getElementById('new-subfolder-name').value.trim();
       if (sub) {
-        if (!window.appData.subFolders[lang]) window.appData.subFolders[lang] = [];
-        if (!window.appData.subFolders[lang].includes(sub)) {
-          window.appData.subFolders[lang].push(sub);
-          if (typeof saveMetaToCloud === 'function') saveMetaToCloud();
+        if (!appData.subFolders[lang]) appData.subFolders[lang] = [];
+        if (!appData.subFolders[lang].includes(sub)) {
+          appData.subFolders[lang].push(sub);
+          saveData();
           onLanguageChange();
           document.getElementById('subfolder-select').value = sub;
           renderApp();
           closeSubFolderModal();
+          document.getElementById('new-subfolder-name').value = '';
         } else {
           alert('該子資料夾已存在');
         }
@@ -453,9 +321,20 @@
         return;
       }
 
-      const wordObj = { lang, subFolder, term, definition, note };
-      if (typeof saveWordToCloud === 'function') saveWordToCloud(wordObj);
+      const wordObj = {
+        id: Date.now().toString(),
+        lang,
+        subFolder,
+        term,
+        definition,
+        note
+      };
+
+      appData.words.push(wordObj);
+      saveData();
+      renderApp();
       closeWordModal();
+
       document.getElementById('word-term').value = '';
       document.getElementById('word-definition').value = '';
       document.getElementById('word-note').value = '';
@@ -463,9 +342,14 @@
 
     function deleteWord(id) {
       if (confirm('確定要刪除這個單字嗎？')) {
-        if (typeof deleteWordFromCloud === 'function') deleteWordFromCloud(id);
+        appData.words = appData.words.filter(w => w.id !== id);
+        saveData();
+        renderApp();
       }
     }
+
+    // 頁面載入後初始化
+    window.onload = init;
   </script>
 </body>
 </html>

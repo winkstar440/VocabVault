@@ -1,27 +1,29 @@
-# 多層級雲端單字表 (帳號密碼版)
+# 多層級單字表 (Local Storage 版)
 
-支援「語言大分類 → 子資料夾」兩層結構，使用 **Email + 密碼** 登入的雲端單字學習 App。
+純前端、使用 **瀏覽器 Local Storage** 儲存資料的多層級單字學習 App。
 
 ## 功能
 
-- **Email / 密碼登入與註冊**：資料綁定個人帳號，多裝置同步
-- 兩層結構：語言大分類 → 子資料夾
+- **兩層結構**：語言大分類 → 子資料夾
 - 可自由新增語言與子資料夾
 - 新增 / 刪除單字
 - 搜尋單字
 - 文字轉語音（TTS）
-- Firebase Firestore 雲端儲存
+- 資料儲存在本機瀏覽器，無需登入、無需雲端
+
+## 特點
+
+- 完全離線可用
+- 不依賴 Firebase 或其他後端
+- 資料只存在你自己的瀏覽器中
+- 適合個人使用，隱私安全
 
 ## 技術
 
 - 純 HTML + Tailwind CSS + Vanilla JS
-- Firebase Authentication (Email/Password)
-- Cloud Firestore
+- Web Speech API（發音）
+- LocalStorage（資料持久化）
 
-## 部署建議
+## 使用方式
 
-建議使用 **Firebase Hosting** 部署，倉庫保持 Private。
-
-## 重要設定
-
-在 Firebase Console → Authentication → Sign-in method 中，請確認已啟用 **Email/Password** 登入提供者。
+直接打開 `index.html`，或部署到任何靜態網站託管服務（GitHub Pages / Firebase Hosting / Netlify 等）。
