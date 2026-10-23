@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多層級雲端單字表 (Google 登入版)</title>
+  <title>多層級雲端單字表 (帳號密碼版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -19,13 +19,12 @@
         <i class="fa-solid fa-layer-group text-indigo-600"></i> 多層級單字表
       </h1>
       <div id="auth-container" class="flex items-center gap-2">
-        <!-- 登入狀態 / 按鈕會動態顯示在這裡 -->
         <span class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500" id="status-text">檢查登入中...</span>
       </div>
     </div>
   </header>
 
-  <!-- 主要內容區 (未登入時隱藏或顯示提示) -->
+  <!-- 主要內容區 (登入後顯示) -->
   <main id="app-main" class="max-w-md w-full mx-auto p-4 flex-1 pb-24 hidden">
 
     <!-- 第一層：選擇語言大分類 -->
@@ -74,16 +73,33 @@
 
   </main>
 
-  <!-- 未登入時的提示畫面 -->
-  <div id="login-prompt" class="max-w-md w-full mx-auto p-8 flex-1 flex flex-col items-center justify-center text-center">
-    <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mb-4 shadow-sm">
-      <i class="fa-solid fa-cloud-arrow-up"></i>
+  <!-- 未登入時的登入/註冊表單畫面 -->
+  <div id="login-prompt" class="max-w-md w-full mx-auto p-6 flex-1 flex flex-col justify-center">
+    <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl mx-auto flex items-center justify-center text-xl mb-3">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <h2 class="text-lg font-bold text-slate-800">登入你的單字庫</h2>
+        <p class="text-xs text-slate-500 mt-1">首次使用請直接輸入 Email 與密碼進行註冊</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">電子郵件 (Email)</label>
+          <input type="email" id="auth-email" placeholder="name@example.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">密碼 (Password)</label>
+          <input type="password" id="auth-password" placeholder="設定密碼 (至少6位數)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+
+        <div class="flex gap-2 pt-2">
+          <button onclick="handleLogin()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl transition text-sm shadow-sm">登入</button>
+          <button onclick="handleRegister()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-xl transition text-sm">註冊新帳號</button>
+        </div>
+      </div>
     </div>
-    <h2 class="text-xl font-bold text-slate-800 mb-2">歡迎使用多層級單字表</h2>
-    <p class="text-sm text-slate-500 mb-6">請先登入你的 Google 帳號，以同步與載入你的專屬雲端單字資料。</p>
-    <button onclick="loginWithGoogle()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-3 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-3 text-sm">
-      <i class="fa-brands fa-google text-red-500 text-base"></i> 使用 Google 帳號登入
-    </button>
   </div>
 
   <!-- 底部固定新增按鈕 (登入後顯示) -->
@@ -144,10 +160,10 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs & Google Auth Logic -->
+  <!-- Firebase SDKs & Email Auth Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -162,7 +178,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
 
     let currentUserId = null;
     window.appData = {
@@ -191,7 +206,7 @@
         
         authContainer.innerHTML = `
           <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-600 font-medium hidden sm:inline">${user.email || '已登入'}</span>
+            <span class="text-xs text-slate-600 font-medium hidden sm:inline">${user.email}</span>
             <button onclick="logout()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition">登出</button>
           </div>
         `;
@@ -205,12 +220,34 @@
       }
     });
 
-    window.loginWithGoogle = async function() {
+    window.handleLogin = async function() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) {
+        alert('請輸入 Email 與密碼');
+        return;
+      }
       try {
-        await signInWithPopup(auth, provider);
+        await signInWithEmailAndPassword(auth, email, password);
       } catch (error) {
-        console.error("登入失敗", error);
-        alert("Google 登入失敗，請確認 Firebase 主控台是否已啟用 Google 登入功能。");
+        alert('登入失敗：請確認帳號密碼是否正確');
+        console.error(error);
+      }
+    };
+
+    window.handleRegister = async function() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) {
+        alert('請輸入要註冊的 Email 與密碼');
+        return;
+      }
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert('註冊成功並已自動登入！');
+      } catch (error) {
+        alert('註冊失敗：密碼可能太短（需至少6位數）或 Email 格式有誤');
+        console.error(error);
       }
     };
 

@@ -1,10 +1,10 @@
-# 多層級雲端單字表 (Google 登入版)
+# 多層級雲端單字表 (帳號密碼版)
 
-支援「語言大分類 → 子資料夾」兩層結構，並使用 **Google 帳號登入** 的雲端單字學習 App。
+支援「語言大分類 → 子資料夾」兩層結構，使用 **Email + 密碼** 登入的雲端單字學習 App。
 
 ## 功能
 
-- **Google 登入**：資料綁定個人 Google 帳號，多裝置同步
+- **Email / 密碼登入與註冊**：資料綁定個人帳號，多裝置同步
 - 兩層結構：語言大分類 → 子資料夾
 - 可自由新增語言與子資料夾
 - 新增 / 刪除單字
@@ -15,7 +15,7 @@
 ## 技術
 
 - 純 HTML + Tailwind CSS + Vanilla JS
-- Firebase Authentication (Google)
+- Firebase Authentication (Email/Password)
 - Cloud Firestore
 
 ## 部署建議
@@ -24,4 +24,4 @@
 
 ## 重要設定
 
-在 Firebase Console → Authentication → Sign-in method 中，請確認已啟用 **Google** 登入提供者。
+在 Firebase Console → Authentication → Sign-in method 中，請確認已啟用 **Email/Password** 登入提供者。
