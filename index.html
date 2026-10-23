@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多層級雲端單字表</title>
+  <title>多層級雲端單字表 (Google 登入版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -18,15 +18,15 @@
       <h1 class="text-lg font-semibold tracking-tight flex items-center gap-2">
         <i class="fa-solid fa-layer-group text-indigo-600"></i> 多層級單字表
       </h1>
-      <div id="sync-status" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 flex items-center gap-1.5">
-        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse" id="status-dot"></span>
-        <span id="status-text">連線中...</span>
+      <div id="auth-container" class="flex items-center gap-2">
+        <!-- 登入狀態 / 按鈕會動態顯示在這裡 -->
+        <span class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500" id="status-text">檢查登入中...</span>
       </div>
     </div>
   </header>
 
-  <!-- 主要內容區 -->
-  <main class="max-w-md w-full mx-auto p-4 flex-1 pb-24">
+  <!-- 主要內容區 (未登入時隱藏或顯示提示) -->
+  <main id="app-main" class="max-w-md w-full mx-auto p-4 flex-1 pb-24 hidden">
 
     <!-- 第一層：選擇語言大分類 -->
     <div class="mb-4">
@@ -74,8 +74,20 @@
 
   </main>
 
-  <!-- 底部固定新增按鈕 -->
-  <div class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-slate-200 p-4">
+  <!-- 未登入時的提示畫面 -->
+  <div id="login-prompt" class="max-w-md w-full mx-auto p-8 flex-1 flex flex-col items-center justify-center text-center">
+    <div class="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl mb-4 shadow-sm">
+      <i class="fa-solid fa-cloud-arrow-up"></i>
+    </div>
+    <h2 class="text-xl font-bold text-slate-800 mb-2">歡迎使用多層級單字表</h2>
+    <p class="text-sm text-slate-500 mb-6">請先登入你的 Google 帳號，以同步與載入你的專屬雲端單字資料。</p>
+    <button onclick="loginWithGoogle()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium py-3 px-4 rounded-xl shadow-sm transition flex items-center justify-center gap-3 text-sm">
+      <i class="fa-brands fa-google text-red-500 text-base"></i> 使用 Google 帳號登入
+    </button>
+  </div>
+
+  <!-- 底部固定新增按鈕 (登入後顯示) -->
+  <div id="footer-action" class="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-md border-t border-slate-200 p-4 hidden">
     <div class="max-w-md mx-auto">
       <button onclick="openWordModal()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
         <i class="fa-solid fa-plus"></i> 在當前子夾新增單字
@@ -132,10 +144,10 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase SDKs & Google Auth Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -150,6 +162,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
     let currentUserId = null;
     window.appData = {
@@ -163,19 +176,51 @@
       words: []
     };
 
-    signInAnonymously(auth).then(() => {
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          currentUserId = user.uid;
-          document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-emerald-500";
-          document.getElementById('status-text').innerText = "已連線雲端";
-          loadCloudData();
-        }
-      });
-    }).catch(() => {
-      document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-rose-500";
-      document.getElementById('status-text').innerText = "連線失敗";
+    // 監聽登入狀態
+    onAuthStateChanged(auth, (user) => {
+      const authContainer = document.getElementById('auth-container');
+      const appMain = document.getElementById('app-main');
+      const loginPrompt = document.getElementById('login-prompt');
+      const footerAction = document.getElementById('footer-action');
+
+      if (user) {
+        currentUserId = user.uid;
+        appMain.classList.remove('hidden');
+        loginPrompt.classList.add('hidden');
+        footerAction.classList.remove('hidden');
+        
+        authContainer.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-600 font-medium hidden sm:inline">${user.email || '已登入'}</span>
+            <button onclick="logout()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition">登出</button>
+          </div>
+        `;
+        loadCloudData();
+      } else {
+        currentUserId = null;
+        appMain.classList.add('hidden');
+        loginPrompt.classList.remove('hidden');
+        footerAction.classList.add('hidden');
+        authContainer.innerHTML = `<span class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">未登入</span>`;
+      }
     });
+
+    window.loginWithGoogle = async function() {
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        console.error("登入失敗", error);
+        alert("Google 登入失敗，請確認 Firebase 主控台是否已啟用 Google 登入功能。");
+      }
+    };
+
+    window.logout = async function() {
+      try {
+        await signOut(auth);
+      } catch (error) {
+        console.error("登出失敗", error);
+      }
+    };
 
     window.loadCloudData = async function() {
       if (!currentUserId) return;
@@ -384,8 +429,6 @@
         if (typeof deleteWordFromCloud === 'function') deleteWordFromCloud(id);
       }
     }
-
-    setTimeout(() => { if(window.appData) initUI(); }, 1000);
   </script>
 </body>
 </html>
