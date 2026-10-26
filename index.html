@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>多層級單字表 (記憶狀態+編輯+匯出版)</title>
+  <title>多層級雲端單字表 (Firebase 雲端同步版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -12,15 +12,46 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
+  <!-- 🔐 登入/註冊畫面 (未登入時顯示) -->
+  <div id="login-screen" class="fixed inset-0 bg-slate-50 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-6 shadow-xl border border-slate-200">
+      <div class="text-center mb-6">
+        <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-3 shadow-inner">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+        </div>
+        <h2 class="text-xl font-bold text-slate-800">雲端單字庫登入</h2>
+        <p class="text-xs text-slate-500 mt-1">首次使用請直接輸入 Email 與密碼註冊</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">電子郵件 (Email)</label>
+          <input type="email" id="auth-email" placeholder="name@example.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">密碼 (Password)</label>
+          <input type="password" id="auth-password" placeholder="請輸入密碼 (至少6位數)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex gap-2 pt-2">
+          <button onclick="handleLogin()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 rounded-xl transition text-sm shadow-sm">登入</button>
+          <button onclick="handleRegister()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-xl transition text-sm">註冊新帳號</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 頂部導覽列 -->
   <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
     <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
       <h1 class="text-lg font-semibold tracking-tight flex items-center gap-2">
-        <i class="fa-solid fa-layer-group text-indigo-600"></i> 多層級單字表
+        <i class="fa-solid fa-layer-group text-indigo-600"></i> 雲端單字表
       </h1>
-      <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 font-medium">
-        <i class="fa-solid fa-hard-drive mr-1"></i> 本地儲存
-      </span>
+      <div class="flex items-center gap-2">
+        <span id="user-email-display" class="text-xs text-slate-500 font-medium truncate max-w-[150px]"></span>
+        <button onclick="handleLogout()" class="text-xs px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition" title="登出">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> 登出
+        </button>
+      </div>
     </div>
   </header>
 
@@ -68,15 +99,14 @@
 
   </main>
 
-  <!-- 底部固定新增與匯出區域 -->
+  <!-- 底部固定新增與備份區域 -->
   <div class="fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-md border-t border-slate-200 p-4">
     <div class="max-w-md mx-auto flex gap-2">
       <button onclick="openWordModal()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-xl shadow-sm transition flex items-center justify-center gap-2 text-sm">
         <i class="fa-solid fa-plus"></i> 在當前子夾新增單字
       </button>
-      <!-- 右下角匯出按鈕 -->
-      <button onclick="exportData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-xl transition flex items-center justify-center text-sm font-medium shrink-0" title="匯出所有資料備份">
-        <i class="fa-solid fa-download mr-1.5 text-indigo-600"></i> 匯出
+      <button onclick="exportData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-xl transition flex items-center justify-center text-sm font-medium shrink-0" title="複製備份資料">
+        <i class="fa-solid fa-copy mr-1.5 text-indigo-600"></i> 備份
       </button>
     </div>
   </div>
@@ -131,9 +161,28 @@
     </div>
   </div>
 
-  <script>
-    // 預設資料結構
-    const defaultData = {
+  <!-- Firebase 雲端與應用程式邏輯 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    // 你的 Firebase 設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGtBlMHiCJFrzV6jzFMSaYrpWCHUwKdrc",
+      authDomain: "vocab-app-a95c0.firebaseapp.com",
+      projectId: "vocab-app-a95c0",
+      storageBucket: "vocab-app-a95c0.firebasestorage.app",
+      messagingSenderId: "322032736816",
+      appId: "1:322032736816:web:9ce545c9d672b4ef6febf5"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUserId = null;
+    window.appData = {
       languages: ["日文", "西文", "英文", "韓文"],
       subFolders: {
         "日文": ["vocab", "travel"],
@@ -144,51 +193,113 @@
       words: []
     };
 
-    // 讀取 Local Storage 資料
-    function loadData() {
-      const saved = localStorage.getItem('vocab_vault_local_data');
-      if (saved) {
+    // 監聽 Firebase 登入狀態 (實現自動記憶登入)
+    onAuthStateChanged(auth, (user) => {
+      const loginScreen = document.getElementById('login-screen');
+      if (user) {
+        currentUserId = user.uid;
+        document.getElementById('user-email-display').innerText = user.email || '已登入';
+        loginScreen.classList.add('hidden');
+        loadCloudData();
+      } else {
+        currentUserId = null;
+        loginScreen.classList.remove('hidden');
+      }
+    });
+
+    window.handleLogin = async function() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) {
+        alert('請輸入 Email 與密碼');
+        return;
+      }
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        alert('登入失敗：請確認帳號密碼是否正確');
+        console.error(error);
+      }
+    };
+
+    window.handleRegister = async function() {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      if (!email || !password) {
+        alert('請輸入要註冊的 Email 與密碼');
+        return;
+      }
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert('註冊成功並已自動登入！');
+      } catch (error) {
+        alert('註冊失敗：密碼需至少6位數或 Email 格式有誤');
+        console.error(error);
+      }
+    };
+
+    window.handleLogout = async function() {
+      if (confirm('確定要登出嗎？')) {
         try {
-          return JSON.parse(saved);
-        } catch(e) {
-          return defaultData;
+          await signOut(auth);
+          location.reload();
+        } catch (error) {
+          console.error("登出失敗", error);
         }
       }
-      return defaultData;
-    }
+    };
 
-    let appData = loadData();
+    // 從 Firebase 載入資料
+    window.loadCloudData = async function() {
+      if (!currentUserId) return;
+      try {
+        const querySnapshot = await getDocs(collection(db, "users", currentUserId, "multilevel_words"));
+        window.appData.words = [];
+        querySnapshot.forEach((doc) => {
+          window.appData.words.push({ id: doc.id, ...doc.data() });
+        });
 
-    // 儲存至 Local Storage
-    function saveData() {
-      localStorage.setItem('vocab_vault_local_data', JSON.stringify(appData));
-    }
+        const metaSnap = await getDocs(collection(db, "users", currentUserId, "multilevel_meta"));
+        metaSnap.forEach((doc) => {
+          if (doc.id === "structure" && doc.data()) {
+            if (doc.data().languages) window.appData.languages = doc.data().languages;
+            if (doc.data().subFolders) window.appData.subFolders = doc.data().subFolders;
+          }
+        });
 
-    // 儲存最後訪問的頁面狀態
-    function saveLastState(lang, subFolder) {
-      localStorage.setItem('vocab_vault_last_state', JSON.stringify({ lang, subFolder }));
-    }
-
-    // 讀取最後訪問的狀態
-    function loadLastState() {
-      const savedState = localStorage.getItem('vocab_vault_last_state');
-      if (savedState) {
-        try {
-          return JSON.parse(savedState);
-        } catch(e) {
-          return null;
-        }
+        initAppUI();
+      } catch (e) {
+        console.error("雲端載入失敗", e);
       }
-      return null;
-    }
+    };
 
-    // 初始化 UI
-    function init() {
+    window.saveMetaToCloud = async function() {
+      if (!currentUserId) return;
+      await setDoc(doc(db, "users", currentUserId, "multilevel_meta", "structure"), {
+        languages: window.appData.languages,
+        subFolders: window.appData.subFolders
+      });
+    };
+
+    window.saveWordToCloud = async function(wordObj) {
+      if (!currentUserId) return;
+      const id = wordObj.id || Date.now().toString();
+      wordObj.id = id;
+      await setDoc(doc(db, "users", currentUserId, "multilevel_words", id), wordObj);
+      loadCloudData();
+    };
+
+    window.deleteWordFromCloud = async function(id) {
+      if (!currentUserId) return;
+      await deleteDoc(doc(db, "users", currentUserId, "multilevel_words", id));
+      loadCloudData();
+    };
+
+    // 初始化介面與狀態記憶
+    function initAppUI() {
       renderLangSelect();
-      
-      // 讀取上次留下的狀態
       const lastState = loadLastState();
-      if (lastState && appData.languages.includes(lastState.lang)) {
+      if (lastState && window.appData.languages.includes(lastState.lang)) {
         document.getElementById('lang-select').value = lastState.lang;
         onLanguageChange(lastState.subFolder);
       } else {
@@ -196,23 +307,35 @@
       }
     }
 
-    function renderLangSelect() {
+    function saveLastState(lang, subFolder) {
+      localStorage.setItem('vocab_vault_last_state', JSON.stringify({ lang, subFolder }));
+    }
+
+    function loadLastState() {
+      const savedState = localStorage.getItem('vocab_vault_last_state');
+      if (savedState) {
+        try { return JSON.parse(savedState); } catch(e) { return null; }
+      }
+      return null;
+    }
+
+    window.renderLangSelect = function() {
       const select = document.getElementById('lang-select');
       const current = select.value;
       let html = '';
-      appData.languages.forEach(lang => {
+      window.appData.languages.forEach(lang => {
         html += `<option value="${lang}">${lang}</option>`;
       });
       select.innerHTML = html;
-      if (appData.languages.includes(current)) {
+      if (window.appData.languages.includes(current)) {
         select.value = current;
       }
     }
 
-    function onLanguageChange(preferredSubFolder = null) {
+    window.onLanguageChange = function(preferredSubFolder = null) {
       const lang = document.getElementById('lang-select').value;
       const subSelect = document.getElementById('subfolder-select');
-      const subs = appData.subFolders[lang] || [];
+      const subs = window.appData.subFolders[lang] || [];
       
       let html = '';
       subs.forEach(sub => {
@@ -227,14 +350,14 @@
       onSubFolderChange();
     }
 
-    function onSubFolderChange() {
+    window.onSubFolderChange = function() {
       const lang = document.getElementById('lang-select').value;
       const sub = document.getElementById('subfolder-select').value;
       saveLastState(lang, sub);
       renderApp();
     }
 
-    function renderApp() {
+    window.renderApp = function() {
       const lang = document.getElementById('lang-select').value;
       const sub = document.getElementById('subfolder-select').value;
       const keyword = document.getElementById('search-input').value.toLowerCase();
@@ -247,7 +370,7 @@
         return;
       }
 
-      const filtered = appData.words.filter(w => {
+      const filtered = window.appData.words.filter(w => {
         return w.lang === lang && w.subFolder === sub && 
           (w.term.toLowerCase().includes(keyword) || w.definition.toLowerCase().includes(keyword));
       });
@@ -288,8 +411,8 @@
       listContainer.innerHTML = html;
     }
 
-    // 🔊 發音功能
-    function speak(text, langName) {
+    // 發音功能
+    window.speak = function(text, langName) {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
@@ -306,10 +429,10 @@
       } else {
         alert('您的瀏覽器不支援語音發音功能');
       }
-    }
+    };
 
-    // Modal 開啟/關閉
-    function openWordModal() {
+    // Modal 控制
+    window.openWordModal = function() {
       document.getElementById('edit-word-id').value = '';
       document.getElementById('modal-title').innerText = '新增單字';
       document.getElementById('submit-btn').innerText = '確認新增';
@@ -317,10 +440,10 @@
       document.getElementById('word-definition').value = '';
       document.getElementById('word-note').value = '';
       document.getElementById('word-modal').classList.remove('hidden');
-    }
+    };
 
-    function openEditModal(id) {
-      const word = appData.words.find(w => w.id === id);
+    window.openEditModal = function(id) {
+      const word = window.appData.words.find(w => w.id === id);
       if (!word) return;
 
       document.getElementById('edit-word-id').value = word.id;
@@ -330,20 +453,20 @@
       document.getElementById('word-definition').value = word.definition;
       document.getElementById('word-note').value = word.note || '';
       document.getElementById('word-modal').classList.remove('hidden');
-    }
+    };
 
-    function closeWordModal() { document.getElementById('word-modal').classList.add('hidden'); }
-    function openLangModal() { document.getElementById('lang-modal').classList.remove('hidden'); }
-    function closeLangModal() { document.getElementById('lang-modal').classList.add('hidden'); }
-    function openSubFolderModal() { document.getElementById('subfolder-modal').classList.remove('hidden'); }
-    function closeSubFolderModal() { document.getElementById('subfolder-modal').classList.add('hidden'); }
+    window.closeWordModal = function() { document.getElementById('word-modal').classList.add('hidden'); };
+    window.openLangModal = function() { document.getElementById('lang-modal').classList.remove('hidden'); };
+    window.closeLangModal = function() { document.getElementById('lang-modal').classList.add('hidden'); };
+    window.openSubFolderModal = function() { document.getElementById('subfolder-modal').classList.remove('hidden'); };
+    window.closeSubFolderModal = function() { document.getElementById('subfolder-modal').classList.add('hidden'); };
 
-    function createLanguage() {
+    window.createLanguage = function() {
       const name = document.getElementById('new-lang-name').value.trim();
-      if (name && !appData.languages.includes(name)) {
-        appData.languages.push(name);
-        appData.subFolders[name] = [];
-        saveData();
+      if (name && !window.appData.languages.includes(name)) {
+        window.appData.languages.push(name);
+        window.appData.subFolders[name] = [];
+        saveMetaToCloud();
         renderLangSelect();
         document.getElementById('lang-select').value = name;
         onLanguageChange();
@@ -352,16 +475,16 @@
       } else {
         alert('名稱不能為空或已存在');
       }
-    }
+    };
 
-    function createSubFolder() {
+    window.createSubFolder = function() {
       const lang = document.getElementById('lang-select').value;
       const sub = document.getElementById('new-subfolder-name').value.trim();
       if (sub) {
-        if (!appData.subFolders[lang]) appData.subFolders[lang] = [];
-        if (!appData.subFolders[lang].includes(sub)) {
-          appData.subFolders[lang].push(sub);
-          saveData();
+        if (!window.appData.subFolders[lang]) window.appData.subFolders[lang] = [];
+        if (!window.appData.subFolders[lang].includes(sub)) {
+          window.appData.subFolders[lang].push(sub);
+          saveMetaToCloud();
           onLanguageChange(sub);
           closeSubFolderModal();
           document.getElementById('new-subfolder-name').value = '';
@@ -369,10 +492,9 @@
           alert('該子資料夾已存在');
         }
       }
-    }
+    };
 
-    // 送出新增 / 修改單字
-    function handleWordSubmit(e) {
+    window.handleWordSubmit = function(e) {
       e.preventDefault();
       const editId = document.getElementById('edit-word-id').value;
       const lang = document.getElementById('lang-select').value;
@@ -386,62 +508,32 @@
         return;
       }
 
-      if (editId) {
-        // 編輯現有單字
-        const wordIndex = appData.words.findIndex(w => w.id === editId);
-        if (wordIndex !== -1) {
-          appData.words[wordIndex].term = term;
-          appData.words[wordIndex].definition = definition;
-          appData.words[wordIndex].note = note;
-        }
-      } else {
-        // 新增單字
-        const wordObj = {
-          id: Date.now().toString(),
-          lang,
-          subFolder,
-          term,
-          definition,
-          note
-        };
-        appData.words.push(wordObj);
-      }
-
-      saveData();
-      renderApp();
+      const id = editId || Date.now().toString();
+      const wordObj = { id, lang, subFolder, term, definition, note };
+      
+      saveWordToCloud(wordObj);
       closeWordModal();
-    }
+    };
 
-    function deleteWord(id) {
+    window.deleteWord = function(id) {
       if (confirm('確定要刪除這個單字嗎？')) {
-        appData.words = appData.words.filter(w => w.id !== id);
-        saveData();
-        renderApp();
+        deleteWordFromCloud(id);
       }
-    }
+    };
 
-    // 📥 匯出資料為 JSON 檔案
-    function exportData() {
-      if (appData.words.length === 0 && appData.languages.length === 0) {
-        alert('目前沒有任何單字資料可以匯出喔！');
+    // 備份功能 (複製到剪貼簿)
+    window.exportData = function() {
+      if (window.appData.words.length === 0) {
+        alert('目前沒有任何單字可以備份！');
         return;
       }
-
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      
-      // 自動生成檔名，附帶當前日期 (例如: VocabVault_Backup_2026-10-23.json)
-      const dateStr = new Date().toISOString().split('T')[0];
-      downloadAnchor.setAttribute("download", `VocabVault_Backup_${dateStr}.json`);
-      
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    }
-
-    // 頁面載入後初始化
-    window.onload = init;
+      const jsonString = JSON.stringify(window.appData, null, 2);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(jsonString).then(() => {
+          alert('✅ 雲端資料已成功備份並複製到剪貼簿！');
+        });
+      }
+    };
   </script>
 </body>
 </html>
