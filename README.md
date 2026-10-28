@@ -1,5 +1,5 @@
 # 多層級雲端單字表 (VocabVault)
-https://winkstar440.github.io/VocabVault/
+
 
 ## 目前檔案說明
 
@@ -24,4 +24,4 @@ https://winkstar440.github.io/VocabVault/
 
 ## 部署建議
 
-建議使用 **Firebase Hosting** 部署，倉庫保持 Private。
+建議使用 **Firebase Hosting** 部署
